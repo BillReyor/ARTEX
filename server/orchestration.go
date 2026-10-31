@@ -689,11 +689,11 @@ func (s *Server) reseedWorkerPrompt() {
 // 写成「启用自动绑定才读」,默认关闭配置下 reporter 就不会传 evidence_version,
 // SetFindingReportVersionByNodeID 便按 legacy 语义写 -1,漏洞详情与 Markdown 导出
 // 从此常驻「证据已变更，报告待更新」,而 UI 上没有任何入口能把它清掉。
-const reporterToolCallMessage = "上面刚有一个漏洞被 report_finding 登记。请读取返回 JSON 的 finding_id（独立漏洞记录 ID）与 finding_node_id（探索节点 ID），" +
-	"先用 get_finding_traffic(finding_id) 读取当前证据清单及其 version（空清单是正常情况，照常写报告）；" +
-	"若运行指引启用自动绑定，在读取前先核实并关联本次漏洞的流量。节点详情使用 finding_node_id。" +
-	"最后调用 update_finding_report(finding_id=finding_node_id, report, evidence_version=实际读取版本) 保存，" +
-	"evidence_version 必须传，否则报告会被永久标记为待更新。不要混用两种编号。"
+const reporterToolCallMessage = "A finding was just registered via report_finding above. Read the returned JSON's finding_id (independent finding record ID) and finding_node_id (exploration node ID), " +
+	"first use get_finding_traffic(finding_id) to read the current evidence list and its version (an empty list is normal — write the report as usual); " +
+	"if auto-binding is enabled in the run guidance, verify and associate this finding's traffic before reading. Use finding_node_id for node details. " +
+	"Finally call update_finding_report(finding_id=finding_node_id, report, evidence_version=<version actually read>) to save; " +
+	"evidence_version must be passed, otherwise the report will be permanently marked as needing an update. Don't mix up the two IDs."
 
 // 旧版触发消息(0.3.8 及更早)。只有仍与它逐字相同的记录才会被迁移覆盖，用户改过的保持原样。
 const reporterToolCallMessageV1 = "上面刚有一个漏洞被 report_finding 登记。请从触发上下文里取出 finding_id" +
@@ -742,8 +742,8 @@ func (s *Server) seedReporterAgent() {
 	if exist, _ := s.m.pg.GetAgentByKey("reporter"); exist != nil {
 		return // key 已被占用(用户手建过)——不覆盖
 	}
-	a, err := s.m.pg.CreateAgent("reporter", "报告撰写",
-		"漏洞详细报告撰写：发现漏洞时自动触发，查取证据与执行过程后写 Markdown 报告并回写。")
+	a, err := s.m.pg.CreateAgent("reporter", "Report Writer",
+		"Detailed vulnerability reporting: auto-triggered when a finding is registered; gathers evidence and the execution process, writes a Markdown report, and saves it back.")
 	if err != nil {
 		log.Printf("[reporter] 创建 agent 失败: %v", err)
 		return
