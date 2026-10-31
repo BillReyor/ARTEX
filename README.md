@@ -96,9 +96,8 @@ CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex
 ```
 
 Use `./start.sh` (or `start.bat` on Windows) rather than running `./artex`
-directly: it is a supervisor that restarts the process on the exit codes the
-binary uses for self-update and crash recovery. Run it in the background with
-`nohup ./start.sh >artex.log 2>&1 &`.
+directly: it is a supervisor that restarts the process if it exits unexpectedly.
+Run it in the background with `nohup ./start.sh >artex.log 2>&1 &`.
 
 ### Option 3: Docker Compose
 
@@ -148,10 +147,8 @@ CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex
 ./start.sh
 ```
 
-The **System Settings → Version & Update** card also offers an in-app updater
-(download, SHA256 verify, smoke-test, staged swap, and rollback to the previous
-binary) for installs that track published release artifacts. Updates interrupt
-running tasks, so apply them while idle.
+> Rebuilding restarts the service and interrupts any running tasks, so update
+> while idle.
 
 ---
 
