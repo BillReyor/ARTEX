@@ -34,14 +34,14 @@ func (telegramChannel) DestinationKeys() []string { return []string{"base_url"} 
 
 func (telegramChannel) Validate(cfg map[string]any) error {
 	if cfgString(cfg, "bot_token") == "" {
-		return errors.New("缺少 Bot Token")
+		return errors.New("Missing bot token")
 	}
 	if cfgString(cfg, "chat_id") == "" {
-		return errors.New("缺少 Chat ID")
+		return errors.New("Missing chat id")
 	}
 	if base := cfgString(cfg, "base_url"); base != "" {
 		if err := validateHTTPURL(base); err != nil {
-			return fmt.Errorf("API 地址无效: %w", err)
+			return fmt.Errorf("Invalid API address: %w", err)
 		}
 	}
 	return nil
@@ -72,7 +72,7 @@ func (c telegramChannel) Send(ctx context.Context, cfg map[string]any, m Message
 		Description string `json:"description"`
 	}
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return 0, fmt.Errorf("解析 Telegram 响应失败: %w (%s)", err, snippet(raw))
+		return 0, fmt.Errorf("Failed to parse the Telegram response: %w (%s)", err, snippet(raw))
 	}
 	if res.OK {
 		return kept, nil
@@ -80,9 +80,9 @@ func (c telegramChannel) Send(ctx context.Context, cfg map[string]any, m Message
 	// 429 是限流，退避后重试有效；其余（400 参数错、401 token 错、403 被拉黑、
 	// 404 chat 不存在）都是配置问题，重试不会自愈。
 	if res.ErrorCode == 429 {
-		return 0, fmt.Errorf("Telegram 限流: %s", res.Description)
+		return 0, fmt.Errorf("Telegram rate limit: %s", res.Description)
 	}
-	return 0, Permanent(fmt.Errorf("Telegram 返回错误 %d: %s", res.ErrorCode, res.Description))
+	return 0, Permanent(fmt.Errorf("Telegram returned error %d: %s", res.ErrorCode, res.Description))
 }
 
 // telegramEndpoint 拼出 sendMessage 地址。base_url 留空时用官方 API，
@@ -98,7 +98,7 @@ func telegramEndpoint(cfg map[string]any) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
 		// 不透传 err：地址里含 Bot Token，且此时连 addr 都不该回显。
-		return "", fmt.Errorf("拼接 API 地址失败（API 地址：%s）", redactRequestTarget(base))
+		return "", fmt.Errorf("Failed to build the API URL (API address: %s)", redactRequestTarget(base))
 	}
 	return u.String(), nil
 }
