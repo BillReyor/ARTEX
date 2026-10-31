@@ -182,13 +182,13 @@ func renderTriggers(ts *db.ExplorationStore, evs []TriggerEvent) string {
 			if len(ev.Goals) == 1 {
 				b.WriteString(fmt.Sprintf("\n- The human (via the main agent) added one goal: %s — a new goal to be achieved; add exploration directions for it accordingly (if no corresponding intent exists yet).", ev.Goals[0]))
 			} else {
-				b.WriteString(fmt.Sprintf("\n- The human (via the main agent) added %d goals: %s — all new goals to be achieved; add exploration directions for each one that has no corresponding intent yet.", len(ev.Goals), strings.Join(ev.Goals, "；")))
+				b.WriteString(fmt.Sprintf("\n- The human (via the main agent) added %d goals: %s — all new goals to be achieved; add exploration directions for each one that has no corresponding intent yet.", len(ev.Goals), strings.Join(ev.Goals, "; ")))
 			}
 		case "hint":
 			if len(ev.Hints) == 1 {
 				b.WriteString(fmt.Sprintf("\n- The human (via the main agent) added a strategic hint: %s — attached to the exploration graph; adjust/supplement exploration directions accordingly (if no corresponding intent exists yet).", ev.Hints[0]))
 			} else {
-				b.WriteString(fmt.Sprintf("\n- The human (via the main agent) added %d strategic hints: %s — all attached to the exploration graph; adjust/supplement exploration directions for each accordingly.", len(ev.Hints), strings.Join(ev.Hints, "；")))
+				b.WriteString(fmt.Sprintf("\n- The human (via the main agent) added %d strategic hints: %s — all attached to the exploration graph; adjust/supplement exploration directions for each accordingly.", len(ev.Hints), strings.Join(ev.Hints, "; ")))
 			}
 		case "goal_deleted":
 			b.WriteString(fmt.Sprintf("\n- The human deleted this goal: %s — the goal is removed; re-judge the remaining goals/directions accordingly (no need to dispatch intents for it anymore).", ev.Detail))
@@ -226,7 +226,7 @@ func factIDsYielded(ts *db.ExplorationStore, id int64) string {
 	for i, fid := range ids {
 		parts[i] = fmt.Sprintf("#%d", fid)
 	}
-	return strings.Join(parts, "、")
+	return strings.Join(parts, ", ")
 }
 
 // intentSummary reads an intent node's one-line summary (best-effort, "?" on miss).
