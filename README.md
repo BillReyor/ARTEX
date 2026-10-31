@@ -227,14 +227,6 @@ Only set `NEXT_PUBLIC_SSE_BASE` at build time if SSE must use a different origin
 
 ## Features
 
-### Asset synchronization (ScopeSentry)
-
-Import asset data directly from [ScopeSentry](https://github.com/Autumn-27/ScopeSentry)
-instead of re-collecting it: on the **Asset Sync** page, enter the ScopeSentry
-address and API key, pick the targets and asset types (domains / subdomains / IPs
-/ ports / sites / endpoints) by project or task, and import with one click. Assets
-merge by company scope and become usable in the asset graph for agents.
-
 ### Manual vulnerability re-testing
 
 The **Re-test** tab on a task's vulnerability detail page lets you select
