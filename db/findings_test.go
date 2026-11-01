@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// TestDeleteFinding verifies删除漏洞 removes both the findings row and its
+// TestDeleteFinding verifiesDelete vulnerability removes both the findings row and its
 // originating exploration node (kind='finding').
 func TestDeleteFinding(t *testing.T) {
 	d, err := Open(testDSN(t))
@@ -114,7 +114,7 @@ func TestFindingsPageAndStats(t *testing.T) {
 		t.Fatalf("severity sort: want critical first, got %q", p1[0].Severity)
 	}
 	if p1[0].Name != "严重漏洞标题" {
-		t.Fatalf("name round-trip: want 严重漏洞标题, got %q", p1[0].Name)
+		t.Fatalf("name round-trip: want serious vulnerability title, got %q", p1[0].Name)
 	}
 	if p1[1].Severity != "high" {
 		t.Fatalf("severity sort: want high second, got %q", p1[1].Severity)
@@ -439,13 +439,13 @@ func TestAddFindingFollowUpIntent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	auditInput := Activity{Worker: "system", Kind: "text", Summary: "人工提交漏洞深入利用意图", Detail: "验证可利用性并形成证据链"}
+	auditInput := Activity{Worker: "system", Kind: "text", Summary: "Manual vulnerability deep-exploitation intent", Detail: "验证可利用性并形成证据链"}
 	intentID, audit, err := store.AddFindingFollowUpIntent(findingID, findingNodeID, "验证可利用性并形成证据链", auditInput)
 	if err != nil {
 		t.Fatal(err)
 	}
 	secondID, _, err := store.AddFindingFollowUpIntent(findingID, findingNodeID, "从另一条路径深入", Activity{
-		Worker: "system", Kind: "text", Summary: "人工提交漏洞深入利用意图", Detail: "从另一条路径深入",
+		Worker: "system", Kind: "text", Summary: "Manual vulnerability deep-exploitation intent", Detail: "从另一条路径深入",
 	})
 	if err != nil {
 		t.Fatal(err)

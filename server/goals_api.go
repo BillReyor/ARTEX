@@ -9,12 +9,12 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// 总览「目标管理」的人工 CRUD 接口。与 agent 侧的 set_goals 工具写同一批 goal 节点,
-// 但入口是人类在 UI 上直接增删改;新增/修改后复用「复活任务」逻辑(admitTask resume:
-// 终态→running、解除暂停、必要时排队),删除不复活(按产品决策)。每个变更 handler 都走
-// beginTaskOperation/decInflight,避免与任务删除竞态(与意图 CRUD 一致)。
+// Overview of the manual CRUD interface for Goal Management. Write the same batch of goal nodes as the set_goals tool on the agent side,
+// But the entrance is for humans to add, delete, and modify directly on the UI; after addition/modification, the "resurrection task" logic is reused (admitTask resume:
+// Final state → running, unpause, queue if necessary), delete without resurrection (according to product decision). Every change handler goes
+// beginTaskOperation/decInflight, avoid race conditions with task deletion (consistent with intent CRUD).
 
-// listGoals 返回本任务的全部目标(text/vulnclass/state 拆好),供目标管理卡片渲染。
+// listGoals returns all the goals of this task (text/vulnclass/state is disassembled) for the target to manage card rendering.
 func (s *Server) listGoals(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {
@@ -29,8 +29,8 @@ func (s *Server) listGoals(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"goals": goalDTOs(goals)})
 }
 
-// addGoal 人工新增一个目标:落库(挂到任务根 spawns 下)→ 记一条「新增了目标」触发唤醒
-// planner → 复活任务,让规划者据新目标重判是否达成。
+// addGoal manually adds a goal: drop into the library (hang under the task root spawns) → record a "new goal" to trigger wake-up
+// planner → resurrect the task, allowing the planner to re-judge whether it has been achieved based on the new goal.
 func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {
@@ -68,8 +68,8 @@ func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {
 	if of, _ := t.Store.OriginFactID(); of > 0 && id > 0 {
 		_ = t.Store.Link(of, db.RelSpawns, id) // goal descends from the task root (origin fact)
 	}
-	t.NotifyGoal([]string{text}) // 记「人新增了目标:…」触发并唤醒 planner
-	s.reviveTask(t)              // 把已完成/暂停的任务拉回运行态继续跑
+	t.NotifyGoal([]string{text}) // Remember "People added a new goal:..." to trigger and wake up the planner
+	s.reviveTask(t)              // Bring completed/paused tasks back to running state and continue running
 	node, _ := t.Store.GetNode(id)
 	if node == nil {
 		writeErr(w, 500, "Failed to read the goal after writing it")
@@ -78,8 +78,8 @@ func (s *Server) addGoal(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, goalDTO(node))
 }
 
-// editGoal 人工修改一个目标文本(及 vulnclass):改库 → 记「用户修改了目标由 old 变为 new」
-// 触发唤醒 planner → 复活任务,让规划者据新目标调整方向。
+// editGoal manually modify a target text (and vulnclass): change the database → note "the user modified the target from old to new"
+// Trigger wake-up planner → resurrect the task, allowing the planner to adjust the direction according to the new goal.
 func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {
@@ -124,8 +124,8 @@ func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err.Error())
 		return
 	}
-	t.NotifyGoalEdited(oldText, text) // 记「人修改了目标由 old 变为 new」触发并唤醒 planner
-	s.reviveTask(t)                   // 与新增一致:复活任务据新目标重判
+	t.NotifyGoalEdited(oldText, text) // Remember "The person has modified the target from old to new" to trigger and wake up the planner
+	s.reviveTask(t)                   // Consistent with the new addition: the resurrection mission is re-judged based on the new target
 	updated, _ := t.Store.GetNode(gid)
 	if updated == nil {
 		writeErr(w, 500, "Failed to read the goal after updating it")
@@ -134,8 +134,8 @@ func (s *Server) editGoal(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, goalDTO(updated))
 }
 
-// deleteGoal 人工删除一个目标(硬删除,级联删边/锚点):删库 → 记「用户删除了该目标 X」
-// 触发唤醒 planner 据此重判剩余目标。按产品决策,删除【不】复活任务。
+// deleteGoal manually deletes a goal (hard deletion, cascading edge/anchor deletion): Delete database → record "The user deleted the goal X"
+// Trigger wake-up planner to re-judge remaining targets accordingly. According to the product decision, delete the [not] resurrection task.
 func (s *Server) deleteGoal(w http.ResponseWriter, r *http.Request) {
 	t, ok := s.m.Task(r.PathValue("id"))
 	if !ok {
@@ -167,6 +167,6 @@ func (s *Server) deleteGoal(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err.Error())
 		return
 	}
-	t.NotifyGoalDeleted(text) // 记「人删除了该目标:…」触发并唤醒 planner(不复活任务)
+	t.NotifyGoalDeleted(text) // Note "The person deleted the target:..." triggers and wakes up the planner (no resurrecting the task)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }

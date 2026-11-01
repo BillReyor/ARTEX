@@ -53,7 +53,7 @@ and steer from a web dashboard with a human-in-the-loop approval gate.
 - **PostgreSQL** (connection configured via `config.json` or `ARTEX_PG_DSN`).
 - An **LLM API key** — set `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`, or configure a
   provider in the UI's **LLM Configuration** page.
-- For building from source: **Go 1.26+** and **Node.js 20+**.
+- For building from source: **Go 1.26.10+** and **Node.js 22.12+**.
 
 ---
 

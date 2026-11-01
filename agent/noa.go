@@ -14,18 +14,18 @@ func noaWarn(session string) func(string) {
 	return func(msg string) { log.Printf("[noa] %s: %s", session, msg) }
 }
 
-// noa 是 norma v0.4.0 引入的「模型驱动上下文压缩」机制,作为平台实验功能由用户在
-// 系统设置中开关。它与内置 compaction 互斥:noaadapter.Enable 是唯一入口,一次挂上
-// 上下文接管器(Compactor)、Compress 工具与三段常驻提示词,不调用 Enable 即为关闭
-// (内置 compaction 照常工作)。开关由每个 agent 注入的 noaEnabledFn 解析,每 run 读
-// 一次,故切换只影响之后启动的 run,无需重建 agent。
+// noa is the "model-driven context compression" mechanism introduced by norma v0.4.0. As a platform experimental function, users can
+// Switch in system settings. It is mutually exclusive with the built-in compaction: noaadapter.Enable is the only entry, once mounted
+// The context takeover (Compactor), Compress tool and three resident prompt words will be closed if Enable is not called.
+// (Built-in compaction works as usual). The switch is parsed by noaEnabledFn injected by each agent, read every run
+// Once, the switch only affects subsequent runs and does not require rebuilding the agent.
 
-// enableNoa 在解析器报告开启时把 noa 接入 opts。archiveRoot 是压缩原文的持久化基目录
-// (取全局 workDir,各 agent 统一落在 <workDir>/noa 下,不随任务/意图目录分散),sessionID
-// 命名其下的归档子目录(全局唯一,故同一基目录内不冲突)。
+// enableNoa Connect noa to opts when parser reporting is enabled. archiveRoot is the persistent base directory for compressing the original text
+// (Take the global workDir, and all agents fall under <workDir>/noa and are not scattered with the task/intent directory), sessionID
+// Name the archive subdirectory under it (globally unique, so there is no conflict within the same base directory).
 //
-// noa 是实验功能:接入失败不得中断真实任务。发生错误时经 onWarn 上报并回退内置压缩。
-// 启用成功时清掉 opts.Compaction,避免 agentcore 因「两个上下文管理器同时设置」告警。
+// noa is an experimental feature: access failure must not interrupt real tasks. When an error occurs, it is reported via onWarn and the built-in compression is rolled back.
+// Clear opts.Compaction when enabled successfully to avoid agentcore alarms due to "two context managers are set at the same time".
 func enableNoa(opts *agentcore.Options, enabled func() bool, archiveRoot, sessionID string, onWarn func(string)) {
 	if enabled == nil || !enabled() {
 		return
@@ -43,6 +43,6 @@ func enableNoa(opts *agentcore.Options, enabled func() bool, archiveRoot, sessio
 		}
 		return
 	}
-	// Compactor 覆盖 Compaction,但两者并存时 agentcore 每次会告警;明确清掉。
+	// Compactor overrides Compaction, but when both coexist, agentcore will alert each time; clear it explicitly.
 	opts.Compaction = nil
 }

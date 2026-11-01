@@ -28,7 +28,7 @@ import { api } from "@/lib/api";
 import type { CoverageAssetRef, CoverageAssetRefs, CoverageGraphEdge, CoverageGraphNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// 每个父节点下、同一类型的子节点默认展示的数量；超出折叠，"展示更多"每次再拉这么多。
+// The default number of child nodes of the same type displayed under each parent node; if it exceeds the fold, "Show More" will pull this many more each time.
 const FOLD_LIMIT = 20;
 const FOLD_STEP = 20;
 
@@ -46,9 +46,9 @@ const kindMeta: Record<Kind, KindMeta> = {
   endpoint: { label: "Endpoint", icon: Link2, iconBg: "bg-rose-500", hex: "#f43f5e", size: 20 },
 };
 
-// G6 节点图标用平台一致的 lucide 图标：把 lucide 的 SVG 路径（v1.22）渲染成白色描边的
-// data URI，作为节点 iconSrc（白色在实色/灰色底上都清晰）。手写内嵌，避免 react-dom/server
-// 在 React19/Next 客户端打包的问题。
+// The G6 node icon uses the platform-consistent lucide icon: render the lucide SVG path (v1.22) into a white stroke
+// data URI, as node iconSrc (white is clear on solid/gray background). Handwritten inline to avoid react-dom/server
+// Issues with client-side packaging in React19/Next.
 function svgUri(inner: string, filled = false): string {
   const attrs = filled
     ? 'fill="#fff" stroke="none"'
@@ -87,7 +87,7 @@ const FOLD_ICON = svgUri(
 );
 
 // ---------------------------------------------------------------------------
-// Folding: full graph → currently-visible node/edge set (自顶向下级联折叠)。
+// Folding: full graph → currently-visible node/edge set (top-down cascading folding).
 // ---------------------------------------------------------------------------
 type FoldNode = {
   fold: true;
@@ -175,7 +175,7 @@ function computeVisible(
 }
 
 // ---------------------------------------------------------------------------
-// G6 数据映射。自定义字段放节点顶层（G6 v5 官方 force 示例约定：style/layout 回调直接读 d.<field>）。
+// G6 data mapping. Custom fields are placed at the top level of the node (G6 v5 official force example convention: style/layout callback reads d.<field> directly).
 // ---------------------------------------------------------------------------
 type G6NodeDatum = {
   id: string;
@@ -191,8 +191,8 @@ function trunc(s: string, n = 26): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }
 
-// 图里的节点文案：服务不显示完整 URL，只显示 端口·标题·状态码；端点只显示 path。
-// 其余类型沿用后端给的 label。
+// The node copy in the picture: the service does not display the complete URL, only the port, title, and status code; the endpoint only displays the path.
+// The remaining types follow the label given by the backend.
 function graphLabel(n: CoverageGraphNode): string {
   if (n.kind === "service") {
     const parts: string[] = [];
@@ -205,7 +205,7 @@ function graphLabel(n: CoverageGraphNode): string {
     try {
       return new URL(n.url).pathname || "/";
     } catch {
-      /* 非法 URL：回退到完整 label */
+      /* Illegal URL: fallback to full label */
     }
   }
   return n.label;
@@ -236,11 +236,11 @@ function toG6Nodes(renderNodes: RenderNode[]): G6NodeDatum[] {
   });
 }
 
-// G6 的类型把自定义字段归在 data 下，但官方 force 示例（及运行时）按顶层读 d.<field>。
-// 回调形参用 unknown 满足 G6 签名，内部用 nd() 强转回我们的顶层结构。
+// G6's types group custom fields under data, but the official force example (and runtime) reads d.<field> at the top level.
+// The callback formal parameter uses unknown to satisfy the G6 signature, and nd() is used internally to forcefully transfer back to our top-level structure.
 const nd = (d: unknown) => d as G6NodeDatum;
 
-// 已测=实色高亮；范围内未测=灰；范围外/折叠=更淡的灰 + 虚线描边。
+// Measured = solid highlight; Unmeasured in range = gray; Out of range/collapsed = lighter gray + dashed stroke.
 function nodeFill(d: G6NodeDatum): string {
   if (d.fold) return "#f1f5f9";
   if (!d.inScope) return "#e2e8f0";
@@ -254,7 +254,7 @@ function nodeStroke(d: G6NodeDatum): string {
 }
 
 // ---------------------------------------------------------------------------
-// 抽屉：资产节点看详情；折叠节点看隐藏列表 + "展示更多"。
+// Drawer: Asset node to see details; collapsed node to see hidden list + "Show more".
 // ---------------------------------------------------------------------------
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   if (children === undefined || children === null || children === "") return null;
@@ -318,7 +318,7 @@ function AssetSheet({
         if (!cancelled) setRefs(r);
       })
       .catch(() => {
-        /* 无关联或出错：不展示该区块 */
+        /* Unrelevant or error: do not display this block */
       });
     return () => {
       cancelled = true;
@@ -468,7 +468,7 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const graphRef = React.useRef<G6Graph | null>(null);
-  // click 处理需要最新的 key→RenderNode 映射（G6 事件回调闭包外读 ref）。
+  // Click processing requires the latest key→RenderNode mapping (read ref outside G6 event callback closure).
   const renderMapRef = React.useRef<Map<string, RenderNode>>(new Map());
   const gDataRef = React.useRef<{ nodes: G6NodeDatum[]; edges: { source: string; target: string }[] }>({
     nodes: [],
@@ -480,13 +480,13 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
     api
       .taskCoverageGraph(taskId)
       .then((g) => {
-        // 资产覆盖度功能关闭(B1)：仍出图(范围内资产/company 关联依旧可见)，但抹平
-        // tested 状态——不显示测试进度、不做已测高亮。
+        // Asset coverage function is turned off (B1): the map is still displayed (assets/company associations within the scope are still visible), but smoothed
+        // tested status - does not display test progress and does not highlight tested results.
         const nodes = coverageEnabled ? (g.nodes ?? []) : (g.nodes ?? []).map((n) => ({ ...n, tested: false }));
         setData({ nodes, edges: g.edges ?? [] });
       })
       .catch(() => {
-        /* 保留上一次数据 */
+        /* Keep last data */
       })
       .finally(() => setLoading(false));
   }, [taskId, coverageEnabled]);
@@ -503,14 +503,14 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
     [data, expanded],
   );
 
-  // 结构签名：只在可见节点/边集合变化时重建图 + 重跑布局，避免无谓抖动。
+  // Structural signature: Only rebuild the graph + rerun the layout when the set of visible nodes/edges changes to avoid unnecessary jitter.
   const sig = React.useMemo(
     () =>
       `${renderNodes.map((n) => `${n.key}:${n.fold ? "f" : n.node.tested ? "t" : "u"}`).sort().join(",")}|${renderEdges.length}`,
     [renderNodes, renderEdges],
   );
 
-  // 维护 gDataRef + renderMapRef（供事件与图数据应用读取）。
+  // Maintain gDataRef + renderMapRef (read by event and graph data applications).
   gDataRef.current = {
     nodes: toG6Nodes(renderNodes),
     edges: renderEdges.map((e) => ({ source: e.src, target: e.dst })),
@@ -523,15 +523,15 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
     const graph = graphRef.current;
     if (!graph || graph.destroyed) return;
     graph.setData(gDataRef.current);
-    // render() 异步跑 d3-force 布局;若组件在布局落地前被卸载/销毁,g6 会在已清空的
-    // context 上访问 transform 抛错(见 runtime/layout transformDataAfterLayout)。这是纯
-    // teardown 竞态,吞掉它,不影响功能;真正的渲染错误(图未销毁)仍打日志。
+    // render() runs d3-force layout asynchronously; if the component is unloaded/destroyed before the layout is implemented, g6 will
+    // Accessing transform on context throws an error (see runtime/layout transformDataAfterLayout). This is pure
+    // Teardown race condition, swallow it, does not affect the function; real rendering errors (the image is not destroyed) are still logged.
     void graph.render().catch((err) => {
       if (!graph.destroyed) console.error("[coverage-graph] render:", err);
     });
   }, []);
 
-  // 建图（一次）。动态 import 避开 SSR/静态导出期的 window 依赖。
+  // Build the map (once). Dynamic import avoids the window dependency during SSR/static export.
   React.useEffect(() => {
     let destroyed = false;
     let graph: G6Graph | null = null;
@@ -571,7 +571,7 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
           collide: { radius: (d: unknown) => (nd(d).size ? nd(d).size : 20) + 8 },
           link: {
             distance: (edge: unknown) => {
-              // 顶层（公司/根域名）离子节点远一点，叶子近一点。edge.source 可能是 id 或已解析节点。
+              // The top level (company/root domain name) is farther away from the ion node and the leaves are closer. edge.source may be an id or a resolved node.
               const s = (edge as { source: string | { id?: string } }).source;
               const srcId = typeof s === "string" ? s : (s?.id ?? "");
               const src = renderMapRef.current.get(srcId);
@@ -598,19 +598,19 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
     })();
     return () => {
       destroyed = true;
-      // 先停布局再销毁:尽量缩短"布局在飞、context 被清空"的竞态窗口。
+      // Stop the layout first and then destroy it: try to shorten the race window of "the layout is in flight and the context is cleared".
       try {
         graph?.stopLayout();
       } catch {
-        /* 图可能尚未建成或已无布局上下文 */
+        /* The diagram may not be built yet or may have no layout context */
       }
       graph?.destroy();
       graphRef.current = null;
     };
   }, [applyData]);
 
-  // 可见集合变化 → 重新灌数据 + 布局。sig 只作为重排触发器（applyData 读 gDataRef）。
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sig 是刻意的重排触发依赖
+  // Visible collection changes → refill data + layout. sig only acts as a reorder trigger (applyData reads gDataRef).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sig is a deliberate rearrangement of trigger dependencies
   React.useEffect(() => {
     applyData();
   }, [sig, applyData]);
@@ -639,7 +639,7 @@ function GraphInner({ taskId, coverageEnabled = true }: { taskId: string; covera
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* 图例 + 统计 + 刷新（叠加层） */}
+      {/* Legend + Statistics + Refresh (overlay) */}
       <div className="bg-card/95 pointer-events-auto absolute top-3 left-3 flex max-w-[340px] flex-col gap-2.5 rounded-lg border p-3 text-xs shadow-sm backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           {total > 0 ? (

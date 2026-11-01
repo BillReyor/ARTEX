@@ -4,9 +4,9 @@ import * as React from "react";
 
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
 
-// 会话输入框的发送/换行键位。纯前端偏好：只落 localStorage，不入库、不随账号同步，
-// 因此换浏览器需要重设。见 issue #39——0.3.2 把 Ctrl+Enter 发送改成了 Enter 发送，
-// 这里把旧键位还回来作为可选项。
+// The send/line feed key of the session input box. Pure front-end preference: only localStorage, no storage, no synchronization with the account,
+// Therefore, changing browsers requires a reset. See issue #39 - 0.3.2 changed Ctrl+Enter to send to Enter.
+// Returning the old keys is optional here.
 export type ChatSendMode = "enter" | "ctrl-enter";
 
 export const CHAT_SEND_MODE_KEY = "artex_chat_send_mode";
@@ -21,8 +21,8 @@ function parseMode(raw: string | null): ChatSendMode {
   return raw === "ctrl-enter" || raw === "enter" ? raw : DEFAULT_CHAT_SEND_MODE;
 }
 
-// 同一标签页内的订阅者集合。localStorage 的 storage 事件只在「其他」标签页触发，
-// 本页在设置里改完后要靠 emit 通知同页的输入框，否则得刷新才生效。
+// A collection of subscribers within the same tab. The storage event of localStorage is only triggered on the "Other" tab.
+// After making changes to this page in the settings, you need to emit to notify the input box on the same page, otherwise you have to refresh to take effect.
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {
@@ -34,12 +34,12 @@ function subscribe(listener: () => void) {
   };
 }
 
-// 返回的是字符串字面量，Object.is 按值比较，不会让 useSyncExternalStore 陷入循环。
+// What is returned is a string literal, Object.is is compared by value, and useSyncExternalStore will not fall into a loop.
 function getSnapshot(): ChatSendMode {
   return parseMode(getLocalStorageValue(CHAT_SEND_MODE_KEY));
 }
 
-// 服务端没有 localStorage，先渲染默认值，hydrate 后 getSnapshot 再纠正。
+// There is no localStorage on the server, so the default value is rendered first, hydrated and then corrected by getSnapshot.
 function getServerSnapshot(): ChatSendMode {
   return DEFAULT_CHAT_SEND_MODE;
 }
@@ -53,10 +53,10 @@ export function setChatSendMode(mode: ChatSendMode) {
   for (const listener of listeners) listener();
 }
 
-// shouldSubmitOnKey 判断一次按键是否应当发送。
-// isComposing / keyCode 229 是中文等输入法正在选字，必须放行，否则回车选词会误发送。
-// enter 模式只排除 Shift，与 0.3.2 的行为逐字保持一致——不改设置的用户手感不变。
-// ctrl-enter 模式同时接受 Ctrl 与 Cmd（macOS）。
+// shouldSubmitOnKey determines whether a keystroke should be sent.
+// isComposing / keyCode 229 means that the input method such as Chinese is selecting words and must be allowed, otherwise the word selection by pressing Enter will be sent by mistake.
+// The enter mode only excludes Shift, which is consistent with the behavior of 0.3.2 verbatim - the user experience without changing the settings remains unchanged.
+// ctrl-enter mode accepts both Ctrl and Cmd (macOS).
 export function shouldSubmitOnKey(e: React.KeyboardEvent, mode: ChatSendMode): boolean {
   if (e.key !== "Enter") return false;
   if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return false;
