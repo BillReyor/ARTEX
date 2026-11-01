@@ -1,0 +1,58 @@
+# syntax=docker/dockerfile:1
+#
+# From-source image build. Unlike Dockerfile (which assembles a pre-built
+# binary), this compiles everything inside the build: the Next.js frontend,
+# then the Go binary with the embedded UI, then the same runtime image.
+#
+# docker-compose.yml builds the `artex` service from this file, so
+# `docker compose up -d --build` works without a pre-built binary or a
+# published image.
+
+# --- Stage 1: build the static frontend (Next.js export -> web/out) ---
+FROM node:20-bookworm AS web
+WORKDIR /src/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build:static
+
+# --- Stage 2: compile the Go binary with the embedded UI ---
+FROM golang:1.26-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# //go:embed all:webui/dist (build tag embedui) expects the exported frontend
+# at server/webui/dist.
+COPY --from=web /src/web/out ./server/webui/dist
+RUN CGO_ENABLED=0 go build -tags embedui -trimpath -o /out/artex ./cmd/artex
+
+# --- Stage 3: runtime (recon tools + Node 20 + Playwright; mirrors Dockerfile) ---
+FROM python:3.12-slim-bookworm
+# Common tooling plus a set of recon staples (ripgrep / curl / nmap / etc.).
+# Node comes from NodeSource 20.x: bookworm's apt nodejs is 18, and Playwright
+# needs >= 20.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates ripgrep curl wget vim git jq unzip \
+      dnsutils iputils-ping netcat-openbsd inetutils-telnet whois nmap \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+# Pre-install Playwright MCP + CLI globally and the chromium browser so the
+# container does not download them over the network on first use.
+RUN npm install -g @playwright/mcp@latest @playwright/cli@latest playwright@latest \
+    && playwright-cli --help \
+    && playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /out/artex /app/artex
+# The supervisor launch script is the real entrypoint: it relaunches artex by
+# exit code and forwards SIGTERM for a clean `docker stop`.
+COPY start.sh /app/start.sh
+RUN chmod +x /app/artex /app/start.sh
+COPY skills/ /app/skills/
+# data/ (SQLite + jwt.key) persistence point.
+VOLUME ["/app/data"]
+EXPOSE 8787 8788
+ENTRYPOINT ["/app/start.sh"]
+CMD ["-addr", ":8787", "-proxy", ":8788"]
