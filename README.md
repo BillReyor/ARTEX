@@ -14,6 +14,8 @@ and steer from a web dashboard with a human-in-the-loop approval gate.
 - **Human-in-the-loop** — an intercept/approval gate can require your sign-off
   before risky tool calls run.
 
+📖 **New to ARTEX?** Read the **[User Manual](docs/USER_MANUAL.md)** — requirements, install, first-run setup, and an end-to-end walkthrough with screenshots.
+
 ---
 
 ## Screenshot Overview
