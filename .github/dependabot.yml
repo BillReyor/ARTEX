@@ -1,0 +1,47 @@
+# Security updates are enabled separately in the repository settings.
+# Weekly version checks also keep dependencies current between advisories.
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    allow:
+      - dependency-type: "all"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directories:
+      - "/web"
+      - "/skills/api-recon/scripts"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    # These are locally built application images, not registry dependencies.
+    ignore:
+      - dependency-name: "artex"
+      - dependency-name: "artex-bench"
+    open-pull-requests-limit: 5
