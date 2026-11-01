@@ -480,8 +480,8 @@ func TestTaskContextRejectsDuplicatesAndAllowsTerminalLLMEdits(t *testing.T) {
 		t.Fatal("duplicate source task ids should be rejected")
 	}
 
-	// 终态任务仍然可以改 LLM 配置链:任务结束后主 Agent 对话继续走这条链,
-	// 链上模型不可用时必须还能换。
+	// The final task can still change the LLM configuration chain: after the task ends, the main Agent dialogue continues along this chain.
+	// It must be able to be replaced when the model on the chain is unavailable.
 	profileID, err := d.SaveProfile(&LLMProfile{
 		Name: fmt.Sprintf("terminal-chain-%d", time.Now().UnixNano()), Format: "openai",
 		Model: "terminal-model", APIKey: "test-key",
@@ -607,7 +607,7 @@ RETURNING id`, domainB, companyB).Scan(&companyAssetB); err != nil {
 			t.Errorf("company asset %d missing from task", assetID)
 			continue
 		}
-		if asset.TaskSource != taskCompanyAssetSource || asset.TaskSourceSummary != "任务创建时关联企业："+companyName {
+		if asset.TaskSource != taskCompanyAssetSource || asset.TaskSourceSummary != "Linked company at task creation: "+companyName {
 			t.Errorf("asset %d provenance=%q/%q", assetID, asset.TaskSource, asset.TaskSourceSummary)
 		}
 	}

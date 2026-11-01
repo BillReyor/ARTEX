@@ -61,12 +61,12 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        // 关闭对话框的唯一条件:点击的是遮罩(灰色背景)本身,且此刻没有任何 Radix 弹层
-        // (Select 下拉等)开着。其余"外部交互"一律挡掉(Esc、右上角 ✕ 仍可关):
-        //  · 点弹层里的选项 → target 不是遮罩 → 挡;
-        //  · 弹层开着时点对话框外/遮罩想收起它 → 有弹层开着 → 挡(只收弹层,不关对话框);
-        //  · 弹层收起时焦点移动被 Radix 误判为焦点移出 → target 不是遮罩 → 挡。
-        // (onInteractOutside 在指针/焦点两条路径都会触发。)调用方仍可追加逻辑。
+        // The only condition for closing the dialog box is: the click is on the mask (gray background) itself, and there is no Radix pop-up layer at the moment.
+        // (Select drop-down, etc.) is on. All other "external interactions" are blocked (Esc, upper right corner ✕ can still be turned off):
+        // · Click the option in the bullet layer → target is not a mask → block;
+        // · When the pop-up layer is open, click outside the dialog box/mask and want to close it → there is a pop-up layer open → block (only close the pop-up layer, not close the dialog box);
+        // · When the elastic layer is retracted, the focus movement is misjudged by Radix as the focus moves out → the target is not a mask → blocked.
+        // (onInteractOutside will be triggered on both pointer/focus paths.) The caller can still append logic.
         onInteractOutside={(e) => {
           const target = e.detail.originalEvent.target as Element | null
           const onOverlay = !!target?.closest?.("[data-slot='dialog-overlay']")

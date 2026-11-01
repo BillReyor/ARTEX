@@ -18,13 +18,13 @@ type goalSpec struct {
 }
 
 // launchTask runs the shared post-creation sequence for a task created via ANY
-// path (HTTP createTask 或 orchestration spawn_task),避免两处复制粘贴:
-//  1. seed 根资产,喂给事件驱动 loop;
-//  2. 可选种子意图,worker 免等首轮 planner 直接开跑;
-//  3. 后台异步做目标分解(发「第 0 轮目标拆解」round + LLM 分解步骤 + 逐条 goal,页面可见),
-//     分解完再 engine.Run —— 引擎在 goal 节点就绪后才启动,避免 planner 抢在 goal 之前跑的竞态。
+// path (HTTP createTask or orchestration spawn_task), avoid copying and pasting in two places:
+// 1. The seed root asset is fed to the event-driven loop;
+// 2. Optional seed intention, workers can start running directly without waiting for the first round of planner;
+// 3. Do goal decomposition asynchronously in the background (send "0th round of goal decomposition" round + LLM decomposition steps + goal one by one, visible on the page),
+// After decomposition, engine.Run - the engine will be started after the goal node is ready, to avoid a race condition in which the planner runs before the goal.
 //
-// 异步(goroutine)所以调用方立即返回,两条路径行为一致:秒建任务、后台拆目标。
+// Asynchronous (goroutine), so the caller returns immediately, and the two paths behave the same: creating tasks in seconds and tearing down targets in the background.
 func (s *Server) launchTask(t *Task, seedText string, seedFirstIntent bool) {
 	if !s.engine.beginTaskOperation(t.ID) {
 		return
@@ -346,12 +346,12 @@ func (s *Server) reconcileConcurrency() {
 	}
 }
 
-// reviveTask 让一个已停下的任务重新跑起来:把终态(done/failed/timeout)拉回 running、
-// 解除暂停,并(重)启动引擎循环 + 唤醒。已在 running 且未暂停的任务:只剩 Run 里的一次
-// Notify,近乎无副作用。用于「主 agent set_goals 新增目标」和「重跑 blocked 意图」两处。
+// reviveTask makes a stopped task run again: bring the final state (done/failed/timeout) back to running,
+// Unpause and (re)start engine cycle + wake. Tasks that are already running and not suspended: only one run left
+// Notify, almost no side effects. Used for both "main agent set_goals new goal" and "rerun blocked intent".
 //
-// 为什么必须显式复活:planner/worker 循环的终态门(engine.go)会吞掉普通 notify——光改
-// 图 + Notify 唤不醒已判完成的任务;重启后终态任务的 goroutine 也可能已不在,故还要 Run。
+// Why it is necessary to explicitly resurrect: the final state gate (engine.go) of the planner/worker loop will swallow the ordinary notify - light modification
+// Figure + Notify cannot wake up tasks that have been completed; after restarting, the goroutine of the final task may no longer exist, so it still needs to run.
 func (s *Server) reviveTask(t *Task) {
 	if t == nil {
 		return

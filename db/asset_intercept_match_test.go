@@ -46,10 +46,10 @@ func TestMatchAssetInterceptRules(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			r, val, ok := MatchAssetInterceptRules(c.rules, c.domains, c.ips, c.urls)
 			if ok != c.want {
-				t.Fatalf("命中 = %v, 期望 %v (rule=%+v)", ok, c.want, r)
+				t.Fatalf("Hit = %v, Expect %v (rule=%+v)", ok, c.want, r)
 			}
 			if ok && val != c.wantVal {
-				t.Fatalf("命中值 = %q, 期望 %q", val, c.wantVal)
+				t.Fatalf("hit value = %q, expected %q", val, c.wantVal)
 			}
 		})
 	}
@@ -59,48 +59,48 @@ func TestEvaluateAssetGate(t *testing.T) {
 	block := []AssetInterceptRule{rule("fuzzy_domain", ".gov.cn", true)}
 	allow := []AssetInterceptRule{rule("fuzzy_domain", "example.com", true)}
 
-	// 1. 命中拦截规则 → 拒绝（拦截原因优先）。
+	// 1. Hit the interception rule → Deny (the interception reason takes precedence).
 	if d := EvaluateAssetGate(block, allow, []string{"www.gov.cn"}, nil, nil); d.Allowed {
-		t.Fatal("命中拦截规则应被拒绝")
+		t.Fatal("Hit blocking rules should be rejected")
 	}
 
-	// 2. 未命中拦截、有允许规则但不命中 → 拒绝（不允许）。
+	// 2. Missed interception, there is a permission rule but no hit → Deny (not allowed).
 	d := EvaluateAssetGate(block, allow, []string{"foo.other.com"}, nil, nil)
 	if d.Allowed {
-		t.Fatal("有白名单且不命中应被拒绝")
+		t.Fatal("There is a whitelist and no hits should be rejected")
 	}
 	if d.Reason == "" {
-		t.Fatal("拒绝应带原因")
+		t.Fatal("Rejection should include reasons")
 	}
 
-	// 3. 未命中拦截、命中允许规则 → 放行。
+	// 3. Miss interception, hit allow rule → release.
 	if d := EvaluateAssetGate(block, allow, []string{"api.example.com"}, nil, nil); !d.Allowed {
-		t.Fatal("命中白名单应放行")
+		t.Fatal("Hits in the whitelist should be allowed")
 	}
 
-	// 4. 无允许规则（白名单未启用）→ 未命中拦截即放行。
+	// 4. No allow rules (whitelist is not enabled) → Allow without interception.
 	if d := EvaluateAssetGate(block, nil, []string{"foo.other.com"}, nil, nil); !d.Allowed {
-		t.Fatal("无白名单时未命中拦截应放行")
+		t.Fatal("If there is no whitelist, the missed interception should be allowed.")
 	}
 
-	// 5. 允许规则全部禁用 → 视为白名单未启用，放行。
+	// 5. Disable all allowed rules → Treat the whitelist as not enabled and allow it.
 	disabledAllow := []AssetInterceptRule{rule("fuzzy_domain", "example.com", false)}
 	if d := EvaluateAssetGate(nil, disabledAllow, []string{"foo.other.com"}, nil, nil); !d.Allowed {
-		t.Fatal("白名单全禁用时应放行")
+		t.Fatal("It should be allowed when all whitelists are disabled.")
 	}
 
-	// 6. 拦截优先于允许：同一目标既命中拦截又命中允许 → 拒绝。
+	// 6. Interception takes precedence over permission: The same target hits both interception and permission → deny.
 	if d := EvaluateAssetGate(
 		[]AssetInterceptRule{rule("fuzzy_domain", ".gov.cn", true)},
 		[]AssetInterceptRule{rule("fuzzy_domain", ".gov.cn", true)},
 		[]string{"www.gov.cn"}, nil, nil,
 	); d.Allowed {
-		t.Fatal("拦截应优先于允许")
+		t.Fatal("Blocking should take precedence over allowing")
 	}
 }
 
 func TestAssetInterceptCandidates(t *testing.T) {
-	// 只带 URL 的服务资产：host 应被拆出并归入域名候选，从而被 fuzzy_domain 命中。
+	// Service assets with only URL: host should be unpacked and classified as domain name candidates, thus being hit by fuzzy_domain.
 	a := &Asset{Type: "service", URL: "https://portal.beijing.gov.cn:8443/app"}
 	domains, _, urls := a.interceptCandidates()
 	if len(urls) != 1 || urls[0] != a.URL {
@@ -113,17 +113,17 @@ func TestAssetInterceptCandidates(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("URL host 未拆入域名候选: %v", domains)
+		t.Fatalf("URL host has not been split into the domain name candidate: %v", domains)
 	}
 	r, _, ok := MatchAssetInterceptRules([]AssetInterceptRule{rule("fuzzy_domain", ".gov.cn", true)}, domains, nil, urls)
 	if !ok {
-		t.Fatalf("仅带 URL 的政府服务资产应被 fuzzy_domain 命中, rule=%+v", r)
+		t.Fatalf("Government service assets with URL only should be hit by fuzzy_domain, rule=%+v", r)
 	}
 
-	// URL host 是 IP 时应归入 IP 候选，可被 CIDR 命中。
+	// When the URL host is an IP, it should be classified as an IP candidate and can be hit by CIDR.
 	b := &Asset{Type: "service", URL: "http://10.1.2.3/x"}
 	_, ips, _ := b.interceptCandidates()
 	if r, _, ok := MatchAssetInterceptRules([]AssetInterceptRule{rule("cidr", "10.0.0.0/8", true)}, nil, ips, nil); !ok {
-		t.Fatalf("URL 中的 IP 应被 CIDR 命中, ips=%v rule=%+v", ips, r)
+		t.Fatalf("The IP in the URL should be hit by CIDR, ips=%v rule=%+v", ips, r)
 	}
 }

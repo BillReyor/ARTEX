@@ -117,14 +117,14 @@ func objectProperty(parent map[string]any, key string) map[string]any {
 
 func (s *Server) agentFindingTrafficAccess(ctx context.Context, id int64, write bool) error {
 	if id <= 0 {
-		return errors.New("finding_id must be the standalone vulnerability record ID; not the exploration node ID")
+		return errors.New("finding_id must be the independent finding-record ID; not the exploration node ID")
 	}
 	f, err := s.m.pg.GetFinding(id)
 	if err != nil {
 		return err
 	}
 	if f == nil {
-		return fmt.Errorf("%w: finding_id=%d. Evidence tools use the standalone vulnerability record ID; read it from the finding_id field of list_task_findings / get_task_node_detail; do not pass id / finding_node_id", db.ErrFindingNotFound, id)
+		return fmt.Errorf("%w: finding_id=%d. Evidence tools use the independent finding-record ID; read it from the finding_id field of list_task_findings / get_task_node_detail; do not pass id / finding_node_id", db.ErrFindingNotFound, id)
 	}
 	if ri := agent.RunInfoFrom(ctx); ri.TaskID > 0 {
 		task := s.m.ResolveTask(strconv.FormatInt(ri.TaskID, 10))
@@ -143,7 +143,7 @@ func (s *Server) agentFindingTrafficAccess(ctx context.Context, id int64, write 
 }
 
 func (s *Server) toolBindFindingTraffic() actool.CoreTool {
-	return wrTool("bind_finding_traffic", "Bind verified real HTTP traffic to a registered vulnerability. finding_id uses the standalone vulnerability record ID; do not pass the exploration node ID. References in one batch either all succeed or all fail; repeated references do not overwrite existing notes. Re-binding marks existing reports as pending update; do not re-probe or create duplicate vulnerabilities just to bind.",
+	return wrTool("bind_finding_traffic", "Bind verified real HTTP traffic to a registered vulnerability. finding_id uses the independent finding-record ID; do not pass the exploration node ID. References in one batch either all succeed or all fail; repeated references do not overwrite existing notes. Re-binding marks existing reports as pending update; do not re-probe or create duplicate vulnerabilities just to bind.",
 		objSchema(map[string]any{"finding_id": strParam("Standalone vulnerability record ID, read from the finding_id field of list_task_findings / get_task_node_detail"), "traffic_refs": agent.HintTrafficSchema()}, "finding_id", "traffic_refs"),
 		func(ctx context.Context, raw json.RawMessage) (actool.Result, error) {
 			if !s.m.pg.GetBool(settingAgentTrafficBinding, false) {

@@ -1,5 +1,5 @@
-// Package db is the PostgreSQL data source for ARTEX (取代旧 graph 单文件 SQLite)。
-// 它打开连接、应用 schema、并 seed 内置 agent 与变量目录。
+// Package db is the PostgreSQL data source for ARTEX (replacing the old graph single-file SQLite).
+// It opens the connection, applies the schema, and seeds the built-in agent and variable directories.
 package db
 
 import (
@@ -161,23 +161,23 @@ func Open(dsn string) (*DB, error) {
 type builtinAgent struct {
 	key, name, role, desc string
 	vars                  []promptVar
-	interactiveShell      bool // 建行时的默认交互式 shell 开关；ON CONFLICT 不覆盖用户后续手动开关
-	runSeconds            *int // 建行时的单次 run 墙钟上限(秒)；nil=用种子默认(1200)，0=不限时
+	interactiveShell      bool // The default interactive shell switch during CCB; ON CONFLICT does not cover subsequent manual switches by the user
+	runSeconds            *int // The upper limit of wall clock for a single run in CCB (seconds); nil=default with seed (1200), 0=no time limit
 }
 
 type promptVar struct{ name, desc, example, source string }
 
-// intp 返回 v 的指针，用于给 builtinAgent 可选字段(如 runSeconds)显式取值。
+// intp returns a pointer to v, used to explicitly set values for builtinAgent optional fields (such as runSeconds).
 func intp(v int) *int { return &v }
 
-// builtinAgents mirrors docs §5(a). 内置工具不入库；这里只 seed agent + 变量目录。
-// 注：planner/worker/mainagent/auto 的交互式 shell 默认由下方 interactive_shell_default_v1
-// 块统一置 true（尊重后续 toggle）；这里的 interactiveShell 只给需要「建行即默认开」的新 agent。
+// builtinAgents mirrors docs §5(a). Built-in tools are not included in the library; here only the seed agent + variable directory is included.
+// Note: The interactive shell of planner/worker/mainagent/auto defaults to interactive_shell_default_v1 below
+// Blocks are all set to true (respecting subsequent toggle); the interactiveShell here is only for new agents that require "CCB to open by default".
 var builtinAgents = []builtinAgent{
 	{"goals", "Goal Decomposition", "goals", "Decompose the pentest task goal into several independent, verifiable sub-goals.", []promptVar{
 		{"EngagementDescription", "Task description (test target / background)", "Test the example.com site", "exploration"},
-		// Now 是全局 runtime 变量(见 server.globalPromptVars),不再在各 agent 目录里
-		// 重复定义,否则 withGlobalVars 追加时会与全局项撞名。
+		// Now is a global runtime variable (see server.globalPromptVars) and is no longer in each agent directory.
+		// Repeat the definition, otherwise withGlobalVars will collide with the global item when appended.
 	}, false, nil},
 	{"planner", "Planning", "planner", "Reads the situation, judges goals, and adds exploration intents only when there is genuinely an uncovered new direction (one planning loop per task).", []promptVar{
 		{"Goal", "Overall task goal", "Capture admin privileges on example.com", "exploration"},
@@ -192,9 +192,9 @@ var builtinAgents = []builtinAgent{
 		{"ProxyAddr", "Recording proxy address (drives the dual wording in the prompt)", "127.0.0.1:8080", "runtime"},
 		{"WorkerName", "Worker self-identifier (optional)", "worker-1", "runtime"},
 	}, false, nil},
-	// Auto:内置「平台操作」agent。不参与渗透编排循环,经对话页驱动,用工具操作平台。
+	// Auto: built-in "platform operation" agent. It does not participate in the penetration orchestration cycle. It is driven by the dialogue page and uses tools to operate the platform.
 	{"auto", "Auto", "assistant", "Platform operations assistant: manages tasks (create/view/pause/hint) and assets with tools, and can create/modify skills, custom tools, and MCP servers.", nil, false, nil},
-	// 渗透测试:内置「独立渗透」agent。经对话页驱动,一人从侦察到收尾走完整条渗透链,自己规划自己执行自己验证。默认开启交互式 shell。
+	// Penetration testing: Built-in "independent penetration" agent. Driven by the dialogue page, one person can walk through the entire penetration chain from reconnaissance to conclusion, planning, executing and verifying by himself. The interactive shell is enabled by default.
 	{"pentest", "Pentest", "assistant", "Solo pentest agent: one agent runs the whole chain from recon → attack surface → deep exploitation → verification → wrap-up, planning, executing, and adversarially verifying by itself.", nil, true, intp(0)},
 }
 
@@ -223,8 +223,8 @@ ON CONFLICT (agent_id, var_name) DO UPDATE
 	}
 	// Drop catalog entries for variables that were renamed, so the white-list no
 	// longer advertises a name templates can't resolve (EngagementTitle→Description).
-	// 'Now' 从各 agent 目录提升为全局 runtime 变量后,旧库里 goals 仍残留一条 'Now'
-	// 会与全局项撞名(前端变量列表 key 重复);一并清掉。
+	// After 'Now' is promoted from each agent directory to a global runtime variable, there is still one 'Now' for goals in the old library
+	// It will collide with the global item name (the front-end variable list key is repeated); it will be cleared together.
 	if _, err := d.Exec(`DELETE FROM agent_prompt_vars WHERE var_name IN ('EngagementTitle', 'CoverageGaps', 'Now')`); err != nil {
 		return fmt.Errorf("cleanup renamed vars: %w", err)
 	}
@@ -237,8 +237,8 @@ ON CONFLICT (agent_id, var_name) DO UPDATE
 		}
 		_ = d.SetSetting("interactive_shell_default_v1", "true")
 	}
-	// Seed the built-in browser (Playwright) MCP once — DISABLED by default (用户
-	// 需要时自行启用), no proxy by default. The traffic-capture toggle injects/strips
+	// Seed the built-in browser (Playwright) MCP once — DISABLED by default (User
+	// Enable it when needed), no proxy by default. The traffic-capture toggle injects/strips
 	// the recording proxy + CA at runtime (server.Manager.syncBrowserMCPProxy).
 	// Insert only if absent so we never clobber user edits (args/env/enabled/
 	// visibility) on restart.
@@ -344,7 +344,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 		priority int
 	}
 	rules := []rule{
-		// ── 系统破坏性命令 (priority 100) ──────────────────────────────────
+		// ── System destructive command (priority 100) ─────────────────────────────────
 		{
 			name:     "[builtin] Recursive force delete (rm -rf)",
 			target:   "tool_input",
@@ -426,7 +426,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 			message:  "Flushing firewall rules (iptables -F / nft flush) is forbidden",
 			priority: 100,
 		},
-		// ── 数据库破坏性操作 (priority 90) ─────────────────────────────────
+		// ── Destructive database operations (priority 90) ────────────────────────────────
 		{
 			name:     "[builtin] SQL DROP DATABASE / TABLE / SCHEMA",
 			target:   "tool_input",
@@ -463,11 +463,11 @@ func (d *DB) seedDefaultInterceptRules() error {
 			message:  "Redis FLUSHALL / FLUSHDB is forbidden; it may clear all cached data",
 			priority: 90,
 		},
-		// ── HTTP 破坏性请求 (priority 80) ──────────────────────────────────
-		// Agent 发送 DELETE 请求的三种常见方式：
-		//   1. curl -X DELETE / --request DELETE（Bash 工具直接执行或写入脚本）
-		//   2. Python HTTP 客户端 .delete() 方法
-		//   3. JS/通用脚本里的 method: 'DELETE' / method="DELETE"
+		// ── HTTP destructive request (priority 80) ─────────────────────────────────
+		// There are three common ways for Agents to send DELETE requests:
+		// 1. curl -X DELETE / --request DELETE (Bash tool directly executes or writes script)
+		// 2. Python HTTP client .delete() method
+		// 3. method in JS/general script: 'DELETE' / method="DELETE"
 		{
 			name:     "[builtin] curl / wget sending DELETE requests",
 			target:   "tool_input",
@@ -521,7 +521,7 @@ ON CONFLICT DO NOTHING`,
 // seedDefaultInterceptRulesV2 migrates the two safety patterns that used to be
 // hard-coded in guard.go (destructive shell + data-exfil pipe) into ordinary
 // intercept rules. Gated by its own flag so it also lands on DBs that already ran
-// v1. Unlike the old guard.go floor, these are plain [内置] rules — the user can
+// v1. Unlike the old guard.go floor, these are plain [built-in] rules — the user can
 // disable or delete them. The exfil rule ships DISABLED by default (its
 // curl/wget/nc pipe pattern mis-fires on legitimate CTF/pentest reverse-shell and
 // data-transfer pipes); enable it manually when exfil gating is actually wanted.

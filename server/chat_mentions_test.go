@@ -258,7 +258,7 @@ func TestChatMentionCatalogAndContext(t *testing.T) {
 			if _, err := composeChatMentionMessage(pg, fmt.Sprintf("@[应用#%d]", id)); err == nil {
 				t.Fatal("accepted mismatched type")
 			}
-			if data, err := loadChatMention(pg, chatMentionRef{"asset", id, "资产"}); err != nil || data == nil {
+			if data, err := loadChatMention(pg, chatMentionRef{"asset", id, "Asset"}); err != nil || data == nil {
 				t.Fatalf("generic asset: %v", err)
 			}
 		}

@@ -58,7 +58,7 @@ export function LanguageToggle({ className }: LanguageToggleProps) {
               "pointer-events-none absolute -right-0.5 -bottom-0.5 rounded border border-foreground/20 bg-foreground px-0.5 font-semibold text-[9px] text-background leading-none",
             )}
           >
-            {isZh ? "中" : "EN"}
+          {isZh ? "ZH" : "EN"}
           </span>
         </Button>
       </DropdownMenuTrigger>
@@ -68,7 +68,7 @@ export function LanguageToggle({ className }: LanguageToggleProps) {
           {locale === "en" && <CheckIcon className="ml-auto size-4" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleSelect("zh")} inset>
-          中文
+          Chinese
           {locale === "zh" && <CheckIcon className="ml-auto size-4" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
