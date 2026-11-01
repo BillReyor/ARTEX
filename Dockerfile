@@ -10,7 +10,7 @@
 #   cp -r web/out server/webui/dist
 #   CGO_ENABLED=0 GOARCH=amd64 go build -tags embedui -o dist/amd64/artex ./cmd/artex
 #   docker build -t artex:local .
-FROM python:3.12-slim-bookworm
+FROM python:3.15-slim-bookworm
 ARG TARGETARCH
 # Commonly used tools: ripgrep/curl/vim, add a batch of recon spare parts (add or delete as needed).
 # Node installs 22.x from NodeSource: the apt nodejs that comes with bookworm is 18, and Playwright requires >=20.
